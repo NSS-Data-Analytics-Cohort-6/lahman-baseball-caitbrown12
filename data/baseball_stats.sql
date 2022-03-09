@@ -167,6 +167,7 @@
 
 -- The 5 teams with the lowest average home game attendance in 2016 were the Tampa Bay Rays at Tropicana Field (15,878), Oakland Athletics at Oakland-Alameda County Coliseum (18,784), Cleveland Indians at Progressive Field (19,650), Miami Marlins at Marlins Park (21,405), and the Chicago White Sox at U.S. Cellular Field.
 
+-- 9 Which managers have won the TSN Manager of the Year award in both the National League (NL) and the American League (AL)? Give their full name and the teams that they were managing when they won the award.
 
 -- SELECT COUNT(a.playerid),
 -- 	p.namefirst,
@@ -205,5 +206,128 @@
 -- GROUP BY p.namelast, p.namefirst, t.name, a.lgid, a.yearid
 -- ORDER BY p.namelast DESC, p.namefirst;
 
--- Answer Jim Leyland (leylaji99 - 1 AL, 3NL)
+-- 9 Which managers have won the TSN Manager of the Year award in both the National League (NL) and the American League (AL)? Give their full name and the teams that they were managing when they won the award.
+
+-- SELECT COUNT(a.awardid),
+-- 	p.namefirst,
+-- 	p.namelast,
+-- 	a.lgid,
+-- FROM awardsmanagers AS a
+-- INNER JOIN people AS p
+-- ON a.playerid = p.playerid
+-- WHERE a.awardid = 'TSN Manager of the Year'
+-- 	AND a.lgid <> 'ML'
+-- GROUP BY p.namelast, p.namefirst, a.lgid
+-- ORDER BY p.namelast DESC, p.namefirst;
+
+
+
+-- Answer Jim Leyland (leylaji99 - 1 AL{2006, COL}, 3NL{1988,1990,1992}) and Davey Johnson (johnsda02 - 1 AL{1997}, 1 NL{2012})
+
+-- SELECT COUNT(a.playerid),
+-- 	p.namefirst,
+-- 	p.namelast,
+-- 	a.lgid, 
+-- 	m.yearid,
+-- 	m.teamid
+-- FROM awardsmanagers AS a
+-- INNER JOIN people AS p
+-- ON a.playerid = p.playerid
+-- LEFT JOIN managers AS m
+-- ON m.yearid = a.yearid
+-- WHERE a.awardid = 'TSN Manager of the Year'
+-- 	AND a.lgid <> 'ML'
+-- GROUP BY p.namelast, p.namefirst, a.lgid, m.yearid, m.teamid
+-- ORDER BY p.namelast DESC, p.namefirst;
+
+
+-- SELECT COUNT(a.awardid),
+-- 	p.namefirst,
+-- 	p.namelast,
+-- 	a.lgid,
+-- 	a.yearid
+-- FROM awardsmanagers AS a
+-- INNER JOIN people AS p
+-- ON a.playerid = p.playerid
+-- WHERE a.awardid = 'TSN Manager of the Year'
+-- 	AND a.lgid <> 'ML'
+-- GROUP BY p.namelast, p.namefirst, a.lgid, a.yearid
+-- ORDER BY p.namelast DESC, p.namefirst;
+
+-- SELECT teamid,
+-- 	playerid
+-- FROM managers
+-- WHERE playerid IN ('leylaji99', 'johnsda02');
+
+WITH n AS (
+	SELECT a.awardid,
+	p.namefirst,
+	p.namelast,
+	a.yearid,
+	a.playerid,
+	a.lgid
+FROM awardsmanagers AS a
+INNER JOIN people AS p
+ON a.playerid = p.playerid
+WHERE awardid = 'TSN Manager of the Year'
+	AND a.lgid = 'NL'),
 	
+	a AS (
+	SELECT a.awardid,
+	p.namefirst,
+	p.namelast,
+	a.yearid,
+	a.playerid,
+	a.lgid
+FROM awardsmanagers AS a
+INNER JOIN people AS p
+ON a.playerid = p.playerid
+WHERE awardid = 'TSN Manager of the Year'
+	AND a.lgid = 'AL')
+	
+SELECT n.namelast,
+	n.namefirst,
+	n.lgid,
+	a.lgid,
+	n.yearid AS NL_year,
+	a.yearid AS AL_year
+FROM n
+INNER JOIN a
+ON a.playerid = n.playerid;
+
+-- Use original 2 CTEs 
+
+-- WITH n AS (
+-- 	SELECT a.awardid,
+-- 	p.namefirst,
+-- 	p.namelast,
+-- 	a.yearid,
+-- 	a.playerid,
+-- 	a.lgid
+-- FROM awardsmanagers AS a
+-- INNER JOIN people AS p
+-- ON a.playerid = p.playerid
+-- WHERE awardid = 'TSN Manager of the Year'
+-- 	AND a.lgid = 'NL'),
+	
+-- 	a AS (
+-- 	SELECT a.awardid,
+-- 	p.namefirst,
+-- 	p.namelast,
+-- 	a.yearid,
+-- 	a.playerid,
+-- 	a.lgid
+-- FROM awardsmanagers AS a
+-- INNER JOIN people AS p
+-- ON a.playerid = p.playerid
+-- WHERE awardid = 'TSN Manager of the Year'
+-- 	AND a.lgid = 'AL')
+	
+-- SELECT n.namelast,
+-- 	n.namefirst,
+-- 	n.lgid,
+-- 	a.lgid,
+-- 	n.yearid
+-- FROM n
+-- OUTER JOIN a
+-- ON a.playerid = n.playerid;
