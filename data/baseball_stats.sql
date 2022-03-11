@@ -123,6 +123,7 @@
 -- FROM teams
 -- WHERE yearid BETWEEN 1970 AND 2016
 -- 	AND wswin = 'Y'
+-- 	AND yearid <> 1981
 -- GROUP BY name, yearid
 -- ORDER BY most_wins;
 
@@ -136,6 +137,29 @@
 -- WHERE yearid BETWEEN 1970 AND 2016
 -- GROUP BY name, yearid, wswin
 -- ORDER BY yearid;
+
+-- SELECT COUNT(SELECT name,
+-- 	MAX(w) AS most_wins
+-- FROM teams) AS team_most_wins
+-- WHERE yearid BETWEEN 1970 AND 2016
+-- 	AND wswin = 'Y'
+-- GROUP BY name, yearid
+-- ORDER BY yearid;
+
+-- SELECT year,
+-- 	COUNT(SELECT name,
+-- 	MAX(w) AS most_wins
+-- FROM teams
+-- WHERE wswin = 'Y'
+-- GROUP BY name, yearid
+-- ORDER BY yearid;)
+-- FROM teams
+-- GROUP BY year;
+
+-- SELECT yearid,
+-- 	COUNT(CASE WHEN max(W) AND wswin = 'Y' THEN teamid END) AS max_wins_wschamp
+-- FROM teams
+-- GROUP BY yearid;
 
 --Needs work to answer final 2 parts. Case statement to help isolate team with most wins and a WS win?
 
@@ -200,18 +224,19 @@
 -- INNER JOIN managershalf AS m
 -- ON p.playerid = m.playerid
 -- INNER JOIN teams as t
--- ON m.playerid = t.playerid
+-- ON m.teamid = t.teamid
 -- WHERE a.awardid = 'TSN Manager of the Year'
 -- 	AND a.lgid <> 'ML'
--- GROUP BY p.namelast, p.namefirst, t.name, a.lgid, a.yearid
+-- GROUP BY p.namelast, p.namefirst, t.name, a.lgid, a.yearid, a.playerid
 -- ORDER BY p.namelast DESC, p.namefirst;
 
 -- 9 Which managers have won the TSN Manager of the Year award in both the National League (NL) and the American League (AL)? Give their full name and the teams that they were managing when they won the award.
 
+--Shows count of awards and league, but does not provide team when managing.
 -- SELECT COUNT(a.awardid),
 -- 	p.namefirst,
 -- 	p.namelast,
--- 	a.lgid,
+-- 	a.lgid
 -- FROM awardsmanagers AS a
 -- INNER JOIN people AS p
 -- ON a.playerid = p.playerid
@@ -220,26 +245,24 @@
 -- GROUP BY p.namelast, p.namefirst, a.lgid
 -- ORDER BY p.namelast DESC, p.namefirst;
 
-
-
 -- Answer Jim Leyland (leylaji99 - 1 AL{2006, COL}, 3NL{1988,1990,1992}) and Davey Johnson (johnsda02 - 1 AL{1997}, 1 NL{2012})
 
--- SELECT COUNT(a.playerid),
--- 	p.namefirst,
--- 	p.namelast,
--- 	a.lgid, 
--- 	m.yearid,
--- 	m.teamid
--- FROM awardsmanagers AS a
--- INNER JOIN people AS p
--- ON a.playerid = p.playerid
--- LEFT JOIN managers AS m
--- ON m.yearid = a.yearid
--- WHERE a.awardid = 'TSN Manager of the Year'
--- 	AND a.lgid <> 'ML'
--- GROUP BY p.namelast, p.namefirst, a.lgid, m.yearid, m.teamid
--- ORDER BY p.namelast DESC, p.namefirst;
-
+--Changed joins to left and using (with two matching criteria for the second join) still includes managers that don't fit the criteria and does not have team name.
+SELECT COUNT(a.playerid),
+	p.namefirst,
+	p.namelast,
+	a.lgid, 
+	m.yearid,
+	m.teamid
+FROM awardsmanagers AS a
+LEFT JOIN people AS p
+USING(playerid)
+LEFT JOIN managers AS m
+USING (yearid, playerid)
+WHERE a.awardid = 'TSN Manager of the Year'
+	AND a.lgid <> 'ML'
+GROUP BY p.namelast, p.namefirst, a.lgid, m.yearid, m.teamid
+ORDER BY p.namelast DESC, p.namefirst;
 
 -- SELECT COUNT(a.awardid),
 -- 	p.namefirst,
@@ -290,44 +313,107 @@ SELECT n.namelast,
 	n.lgid,
 	a.lgid,
 	n.yearid AS NL_year,
-	a.yearid AS AL_year
+	a.yearid AS AL_year,
+	m.teamid
 FROM n
-INNER JOIN a
-ON a.playerid = n.playerid;
+LEFT JOIN a
+USING (playerid, yearid)
+LEFT JOIN managers AS m
+USING (playerid);
 
 -- Use original 2 CTEs 
 
--- WITH n AS (
--- 	SELECT a.awardid,
--- 	p.namefirst,
--- 	p.namelast,
--- 	a.yearid,
--- 	a.playerid,
--- 	a.lgid
--- FROM awardsmanagers AS a
--- INNER JOIN people AS p
--- ON a.playerid = p.playerid
--- WHERE awardid = 'TSN Manager of the Year'
--- 	AND a.lgid = 'NL'),
+WITH n AS (
+	SELECT a.awardid,
+	p.namefirst,
+	p.namelast,
+	a.yearid,
+	a.playerid,
+	a.lgid
+FROM awardsmanagers AS a
+INNER JOIN people AS p
+ON a.playerid = p.playerid
+WHERE awardid = 'TSN Manager of the Year'
+	AND a.lgid = 'NL'),
 	
--- 	a AS (
--- 	SELECT a.awardid,
--- 	p.namefirst,
--- 	p.namelast,
--- 	a.yearid,
--- 	a.playerid,
--- 	a.lgid
--- FROM awardsmanagers AS a
--- INNER JOIN people AS p
--- ON a.playerid = p.playerid
--- WHERE awardid = 'TSN Manager of the Year'
--- 	AND a.lgid = 'AL')
+	a AS (
+	SELECT a.awardid,
+	p.namefirst,
+	p.namelast,
+	a.yearid,
+	a.playerid,
+	a.lgid
+FROM awardsmanagers AS a
+INNER JOIN people AS p
+ON a.playerid = p.playerid
+WHERE awardid = 'TSN Manager of the Year'
+	AND a.lgid = 'AL')
 	
--- SELECT n.namelast,
--- 	n.namefirst,
--- 	n.lgid,
--- 	a.lgid,
--- 	n.yearid
--- FROM n
--- OUTER JOIN a
--- ON a.playerid = n.playerid;
+SELECT n.namelast,
+	n.namefirst,
+	n.lgid AS nl_win,
+	n.yearid,
+	a.lgid AS al_win,
+	a.yearid
+FROM n
+LEFT JOIN a
+ON a.playerid = n.playerid
+WHERE n.lgid IS NOT NULL
+	AND a.lgid IS NOT NULL;
+
+--union is needed to create a table that has one column for year and one for leagueid. Struggling to union since they're from the same table
+-- SELECT yearid AS year
+-- FROM awardsmanagers
+-- UNION ALL
+-- SELECT lgid AS league
+-- FROM awardsmanagers
+-- ORDER BY yearid;
+
+-- SELECT *
+-- FROM managers
+-- ORDER BY playerid
+
+-- SELECT teamid, yearid, playerid --Amanda's query to double check
+-- FROM managers
+-- WHERE yearid IN (1988, 1990, 1992, 1997, 2006, 2012)
+-- 	AND playerid IN ('leylaji99', 'johnsda02')
+-- ORDER BY playerid
+
+
+
+-- 10 Find all players who hit their career highest number of home runs in 2016. Consider only players who have played in the league for at least 10 years, and who hit at least one home run in 2016. Report the players' first and last names and the number of home runs they hit in 2016.
+
+SELECT p.namelast, --move forward with current query but look into window function to isolate numbers for 2016. Still need to filter for players with more than 10 seasons played
+	p.namefirst,
+	MAX(b.hr),
+	COUNT(b.yearid) AS seasons_played
+FROM people AS p
+LEFT JOIN batting AS b
+USING (playerid)
+WHERE b.yearid = 2016 --window
+	AND b.hr >= 1
+GROUP BY p.namelast, p.namefirst
+-- ORDER BY p.namelast, p.namefirst;
+ORDER BY seasons_played DESC;
+
+-- SELECT EXTRACT(YEAR FROM debut)
+-- FROM people
+-- WHERE namelast = 'Price'
+
+-- SELECT namelast,
+-- 	CAST(finalgame AS date) AS final_game,
+-- 	CAST (debut AS date) AS first_game
+-- FROM people
+-- WHERE (CAST(finalgame AS date)-(CAST(debut AS date))) >= 3650
+
+
+-- SELECT p.namelast, --creating duplicates, needs more refining
+-- 	p.namefirst,
+-- 	p.namegiven,
+-- 	COUNT(b.yearid) AS seasons_played
+-- FROM people AS p
+-- LEFT JOIN batting AS b
+-- USING (playerid)
+-- GROUP BY p.namelast, p.namefirst, p.namegiven
+-- ORDER by seasons_played DESC;
+
